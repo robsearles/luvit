@@ -20,10 +20,24 @@ local net = require('net')
 local HttpParser = require('http_parser')
 local table = require('table')
 local osDate = require('os').date
+local string = require('string')
 local stringFormat = require('string').format
+local Object = require('core').Object
+
+local END_OF_FILE = 0
+local CRLF = '\r\n'
 
 local iStream = require('core').iStream
 local http = {}
+
+local connectionExpression = 'Connection'
+local transferEncodingExpression = 'Transfer-Encoding'
+local closeExpression = 'close'
+local chunkExpression = 'chunk'
+local contentLengthExpression = 'Content-Length'
+local dateExpression = 'Date'
+local expectExpression = 'Expect'
+local continueExpression = '100-continue'
 
 local STATUS_CODES = {
   [100] = 'Continue',
@@ -82,6 +96,313 @@ local STATUS_CODES = {
 http.STATUS_CODES = STATUS_CODES
 
 --------------------------------------------------------------------------------
+--[[ Incoming Message Base Class ]]--
+local IncomingMessage = iStream:extend()
+function IncomingMessage:initialize(socket)
+  self.socket = socket
+  self.readable = true
+  self._endEmitted = false
+  self._pendings = {}
+end
+
+function IncomingMessage:destroy(...)
+  self.socket:destroy(...)
+end
+
+function IncomingMessage:pause()
+  self._paused = true
+  self.socket:pause()
+end
+
+function IncomingMessage:resume()
+  self._paused = false
+  if self.socket then
+    self.socket:resume()
+  end
+  self:_emitPending()
+end
+
+function IncomingMessage:_emitPending(callback)
+  if #self._pendings > 0 then
+    process.nextTick(function()
+      while self._paused == false and #self._pendings > 0 do
+        local chunk = table.remove(self._pendings)
+        if chunk ~= END_OF_FILE then
+          self:_emitData(chunk)
+        else
+          self.readable = false
+          self:_emitEnd()
+        end
+      end
+    end)
+  elseif callback then
+    callback()
+  end
+end
+
+function IncomingMessage:_emitData(d)
+  self:emit('data', d)
+end
+
+function IncomingMessage:_emitEnd()
+  if self._endEmitted == false then
+    self:emit('end')
+  end
+  self._endEmitted = true
+end
+
+function IncomingMessage:_addHeaderLine(field, value)
+  local dest = self.complete and self.trailers or self.headers
+  local headerMap = {}
+  field = field:lower()
+
+  function commaSeparate()
+    if dest[field] then
+      dest[field] = dest[field] .. ', ' .. value
+    else
+      dest[field] = value
+    end
+  end
+
+  function default()
+    if field:sub(1,2) == 'x-' then
+      if dest[field] then
+        dest[field] = dest[field] .. ', ' .. value
+      else
+        dest[field] = value
+      end
+    else
+      if not dest[field] then
+        dest[field] = value
+      end
+    end
+  end
+
+  headerMap['accept'] = commaSeparate
+  headerMap['accept-charset'] = commaSeparate
+  headerMap['accept-encoding'] = commaSeparate
+  headerMap['accept-language'] = commaSeparate
+  headerMap['connection'] = commaSeparate
+  headerMap['cookie'] = commaSeparate
+  headerMap['pragma'] = commaSeparate
+  headerMap['link'] = commaSeparate
+  headerMap['www-authenticate'] = commaSeparate
+  headerMap['sec-websocket-extensions'] = commaSeparate
+  headerMap['set-cookie'] = function()
+    if dest[field] then
+      table.insert(dest[field], value)
+    else
+      dest[field] = { value }
+    end
+  end
+
+  local func = headerMap[field] or default
+  func()
+end
+
+--[[ Outgoing Message ]]--
+local OutgoingMessage = IncomingMessage:extend()
+function OutgoingMessage:initialize()
+  IncomingMessage.initialize(self)
+
+  self.output = {}
+
+  self.writable = true
+
+  self._last = false
+  self.chunkedEncoding = false
+  self.shouldKeepAlive = true
+  self.useChunkedEncodingByDefault = true
+  self.sendDate = false
+
+  self._hasBody = true
+  self._headerSent = false
+  self._trailer = ''
+
+  self.finished = false
+end
+
+function OutgoingMessage:destroy(err)
+  self.socket:destroy(err)
+end
+
+function OutgoingMessage:_send(data, encoding)
+  if self._headerSent == false then
+    if type(data) == 'string' then
+      data = self._header .. data
+    else
+      table.insert(self.output, self._header)
+    end
+    self._headerSent = true
+  end
+  return self:_writeRaw(data, encoding)
+end
+
+function OutgoingMessage:_writeRaw(data, encoding)
+  if #data == 0 then
+    return true
+  end
+
+  if self.socket and self.socket.writable == true then
+    while #self.output > 0 do
+      if self.socket.writable == false then
+        -- buffer
+        self:_buffer(data, encoding)
+        return false
+      end
+
+      local c = table.remove(self.output)
+      self.socket:write(c)
+    end
+
+    return self.socket:write(data, encoding)
+  else
+    self:_buffer(data, encoding)
+    return false
+  end
+end
+
+function OutgoingMessage:_buffer(data, encoding)
+  if #data == 0 then
+    return
+  end
+
+  local length = #self.output
+  if length == 0 or type(data) ~= 'string' then
+    table.insert(self.output, data)
+    return false
+  end
+
+  table.insert(self.output, data)
+  return false
+end
+
+function OutgoingMessage:_storeHeader(firstLine, headers)
+  local sentConnectionHeader = false
+  local sentContentLengthHeader = false
+  local sentTransferEncodingHeader = false
+  local sentDateHeader = false
+  local sentExpect = false
+
+  local messageHeader = firstLine
+  local field, value
+
+  function store(field, value)
+    messageHeader = messageHeader .. field .. ': ' .. value .. CRLF
+    if field:match(connectionExpression) then
+      sentConnectionHeader = true
+      if value:match(closeExpression) then
+        self._last = true
+      else
+        self.shouldKeepAlive = true
+      end
+    elseif field:match(transferEncodingExpression) then
+      sentTransferEncodingHeader = true
+      if value:match(chunkExpression) then
+        self.chunkedEncoding = true
+      end
+    elseif field:match(contentLengthExpression) then
+      sentContentLengthHeader = true
+    elseif field:match(dateExpression) then
+      sentDateHeader = true
+    elseif field:match(expectExpression) then
+      sentExpect = true
+    end
+  end
+
+  if headers then
+    local isArray = headers[1]
+    for k, v in pairs(headers) do
+      if isArray then
+        field = headers[k][0]
+        value = headers[k][1]
+      else
+        field = k
+        value = headers[k]
+      end
+
+      if value[1] then -- isArray
+        for k, v in pairs(value) do
+          store(field, v)
+        end
+      else
+        store(field, value)
+      end
+    end
+  end
+
+  if sentConnectionHeader == false then
+    local shouldSendKeepAlive = self.shouldKeepAlive and (sentContentLengthHeader or self.useChunkedEncodingByDefault)
+    if shouldSendKeepAlive == true then
+      messageHeader = messageHeader .. 'Connection: keep-alive\r\n'
+    else
+      self._last = true
+      messageHeader = messageHeader .. 'Connection: close\r\n'
+  end
+
+  if sentContentLengthHeader == false and sentTransferEncodingHeader == false then
+    if self._hasBody == true then
+      if self.useChunkedEncodingByDefault == true then
+        messageHeader = messageHeader .. 'Transfer-Encoding: chunked\r\n'
+        self.chunkedEncoding = true
+      else
+        self._last = true
+      end
+    else
+      self.chunkedEncoding = false
+    end
+  end
+
+  self._header = messageHeader .. CRLF
+  self._headerSent = false
+
+  if sentExpect then
+    self:_send('')
+  end
+end
+
+function OutgoingMessage:setHeader(name, value)
+  local key = name:lower()
+  self._headers = self._headers or {}
+  self._headerNames = self._headerNames or {}
+  self._headers[key] = value
+  self._headerNames[key] = name
+end
+
+function OutgoingMessage:getHeader(name)
+  if not self._headers then
+    return
+  end
+
+  local key = name:lower()
+  return self._headers[key]
+end
+
+function OutgoingMessage:removeHeader(name)
+  if not self._headers then
+    return
+  end
+
+  local key = name:lower()
+  self._headers[key] = nil
+  self._headerNames[key] = nil
+end
+
+function OutgoingMessage:_renderHeaders()
+  if not self._headers then
+    return
+  end
+
+  local headers = {}
+  for k, v in pairs(self._headers) do
+    headers[self._headers[key]] = v
+  end
+  return headers
+end
+
+function OutgoingMessage:write(chunk, encoding)
+end
+
 
 local Request = iStream:extend()
 http.Request = Request
