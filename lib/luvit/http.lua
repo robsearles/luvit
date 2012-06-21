@@ -401,8 +401,151 @@ function OutgoingMessage:_renderHeaders()
 end
 
 function OutgoingMessage:write(chunk, encoding)
+  if not self._header then
+    self:_implicitHeader()
+  end
+
+  if not self._hasBody then
+    print('This type of response must not have a body')
+    return true
+  end
+
+  if #chunk == 0 then
+    return false
+  end
+
+  local len, ret
+  if self.chunkedEncoding then
+    len = #chunk
+    chunk = tostring(tonumber(len, 16)) .. CRLF .. chunk .. CRLF
+    ret = self._send(chunk, encoding)
+  else
+    ret = self._send(chunk, encoding)
+  end
+
+  return ret
 end
 
+function OutgoingMessage:addTrailers(headers)
+  self._trailer = ''
+  local isArray = headers[1]
+  local field, value
+  for k, v in headers do
+    if isArray then
+      field = headers[k][0]
+      value = headers[k][1]
+    else
+      field = k
+      value = headers[k]
+    end
+
+    self._trailer = self._trailer .. field .. ': ' .. value .. CRLF
+  end
+end
+
+function OutgoingMessage:done(data, encoding)
+  if self.finished then
+    return
+  end
+
+  if not self._header then
+    self:_implicitHeader()
+  end
+
+  if data and not self._hasBody then
+    print('This type of response must not have a body')
+    data = false
+  end
+
+  local ret
+  local hot = self._headerSent == false and type(data) == 'string' and
+              #data > 0 and #self.output == 0 and self.socket and socket.socket.writable
+
+  if hot then
+    if self.chunkedEncoding then
+      local l = tostring(tonumber(#data, 16))
+      ret = self.socket:write(self._header .. l .. CRLF .. data .. '\r\n0\r\n' .. self._trailer .. CRLF)
+    else
+      ret = self.socket:write(self._header .. data)
+    end
+    self._headerSent = true
+  else
+    ret = self:write(data, encoding)
+  end
+
+  if not hot then
+    if self.chunkedEncoding then
+      ret = self:_send('0\r\n' .. self._trailer .. '\r\n')
+    else
+      ret = self:_send('')
+    end
+  end
+
+  self.finished = true
+  if #self.output == 0 then
+    self:_finish()
+  end
+
+  return ret
+end
+
+
+function OutgoingMessage:_finish()
+  self:emit('finish')
+end
+
+function OutgoingMessage:_flush()
+  if not self.socket then
+    return
+  end
+
+  local ret
+  while #self.output > 0 do
+    if not self.socket.writable then
+      return
+    end
+
+    local data = table.remove(self.output)
+    ret = self.socket:write(data)
+  end
+
+  if self.finished then
+    self:_finish()
+  elseif ret then
+    self:emit('drain')
+  end
+end
+
+--[[ ServerResponse ]]--
+local ServerResponse = OutgoingMessage:extend()
+function ServerResponse:initialize(req)
+  OutgoingMessage.initialize(self)
+
+  if req.method == 'HEAD' then
+    self._hasBody = false
+  end
+
+  self.sendDate = false
+
+  if req.httpVersionMajor < 1 or req.httpVersionMinor < 1 then
+    self.useChunkedEncodingByDefault = false
+    self.shouldKeepAlive = false
+  end
+
+  self.statusCode = 200
+end
+
+function ServerResponse:assignSocket(socket)
+  socket._httpMessage = self
+  socket:on('close', function()
+    self._httpMessage:emit('close')
+  end)
+  self.socket = socket
+  self:_flush()
+end
+
+function ServerResponse:writeContinue()
+end
 
 local Request = iStream:extend()
 http.Request = Request
