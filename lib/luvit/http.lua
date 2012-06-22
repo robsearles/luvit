@@ -23,6 +23,7 @@ local osDate = require('os').date
 local string = require('string')
 local stringFormat = require('string').format
 local Object = require('core').Object
+local url = require('url')
 
 local END_OF_FILE = 0
 local CRLF = '\r\n'
@@ -1000,6 +1001,9 @@ end
 
 --------------------------------------------------------------------------------
 function http.request2(options, callback)
+  if type(options) == 'string' then
+    options = url.parse(options)
+  end
   return ClientRequest:new(options, callback)
 end
 
