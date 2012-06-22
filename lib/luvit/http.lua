@@ -243,7 +243,6 @@ end
 
 
 function OutgoingMessage:_writeRaw(data, encoding)
-  p('_writeRaw')
   if #data == 0 then
     return true
   end
@@ -450,7 +449,6 @@ function OutgoingMessage:addTrailers(headers)
 end
 
 function OutgoingMessage:done(data, encoding)
-  p('OutgoingMessage:done')
   if self.finished then
     return
   end
@@ -709,7 +707,6 @@ function ClientRequest:onSocket(socket)
       self.socket:destroy()
     end)
     socket:on('data', function(chunk)
-      p(chunk)
       -- Ignore empty chunks
       if #chunk == 0 then return end
 
