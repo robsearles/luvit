@@ -178,6 +178,14 @@ function IncomingMessage:_addHeaderLine(field, value)
     end
   end
 
+  function setCoookie()
+    if dest[field] then
+      table.insert(dest[field], value)
+    else
+      dest[field] = { value }
+    end
+  end
+
   headerMap['accept'] = commaSeparate
   headerMap['accept-charset'] = commaSeparate
   headerMap['accept-encoding'] = commaSeparate
@@ -188,14 +196,9 @@ function IncomingMessage:_addHeaderLine(field, value)
   headerMap['link'] = commaSeparate
   headerMap['www-authenticate'] = commaSeparate
   headerMap['sec-websocket-extensions'] = commaSeparate
-  headerMap['set-cookie'] = function()
-    if dest[field] then
-      table.insert(dest[field], value)
-    else
-      dest[field] = { value }
-    end
-  end
+  headerMap['set-cookie'] = setCookie
 
+  -- execute
   local func = headerMap[field] or default
   func()
 end
@@ -238,7 +241,9 @@ function OutgoingMessage:_send(data, encoding)
   return self:_writeRaw(data, encoding)
 end
 
+
 function OutgoingMessage:_writeRaw(data, encoding)
+  p('_writeRaw')
   if #data == 0 then
     return true
   end
@@ -338,6 +343,7 @@ function OutgoingMessage:_storeHeader(firstLine, headers)
     else
       self._last = true
       messageHeader = messageHeader .. 'Connection: close\r\n'
+    end
   end
 
   if sentContentLengthHeader == false and sentTransferEncodingHeader == false then
@@ -444,6 +450,7 @@ function OutgoingMessage:addTrailers(headers)
 end
 
 function OutgoingMessage:done(data, encoding)
+  p('OutgoingMessage:done')
   if self.finished then
     return
   end
@@ -526,12 +533,6 @@ function ServerResponse:initialize(req)
   end
 
   self.sendDate = false
-
-  if req.httpVersionMajor < 1 or req.httpVersionMinor < 1 then
-    self.useChunkedEncodingByDefault = false
-    self.shouldKeepAlive = false
-  end
-
   self.statusCode = 200
 end
 
@@ -545,7 +546,214 @@ function ServerResponse:assignSocket(socket)
 end
 
 function ServerResponse:writeContinue()
+  self:_writeRaw('HTTP/1.1 100 Continue' + CRLF + CRLF, 'ascii')
+  self.sent100 = true
 end
+
+function ServerResponse:_implicitHeader()
+  self:writeHead(self.statusCode)
+end
+
+function ServerResponse:writeHead(statusCode, ...)
+  local reasonPhrase, headers
+  local args = {...}
+
+  if #args > 0 then
+    reasonPhrase = STATUS_CODES[statusCode] or 'unknown'
+  end
+  self.statusCode = statusCode
+
+  local obj = args[1]
+
+  if obj and self._headers then
+    headers = self:_renderHeaders()
+    local field
+    if obj[1] then
+      for i, v in ipairs(obj) do
+        field = obj[i][1]
+        if headers[field] then
+          table.insert(obj, {field, headers[field]})
+        end
+      end
+      headers = obj
+    else
+      for k, v in pairs(obj) do
+        headers[k] = v
+      end
+    end
+  elseif self._headers then
+    headers = self:_renderHeaders()
+  else
+    headers = obj
+  end
+
+  local statusLine = 'HTTP/1.1 ' .. tostring(statusCode) .. ' ' .. reasonPhrase .. CRLF
+  if statusCode == 204 or statusCode == 304 or (100 <= statusCode and statusCode <= 199) then
+    self._hasBody = false
+  end
+
+  self:_storeHeader(statusLine, headers)
+end
+
+function ServerResponse:writeHeader(...)
+  self:writeHead(...)
+end
+
+--[[ Client Request ]]--
+local ClientRequest = OutgoingMessage:extend()
+function ClientRequest:initialize(options, callback)
+  OutgoingMessage.initialize(self)
+  local defaultPort = options.defaultPort or 80
+  local port = options.port or defaultPort
+  local host = options.hostname or options.host or 'localhost'
+  self.socketPath = options.socketPath
+  self.method = (options.method or 'GET'):upper()
+  self.path = options.path or '/'
+
+  if callback then
+    self:once('response', callback)
+  end
+
+  -- TODO Authorization
+
+  if options.headers then
+    for k, v in pairs(options.headers) do
+      self:setHeader(k, v)
+    end
+
+    if host and not self:getHeader('host') and setHost then
+      local hostHeader = host
+      if port and port ~= defaultPort then
+        hostHeader = hostHeader .. ':' .. port
+      end
+      self:setHeader('Host', hostHeader)
+    end
+  end
+
+  if method == 'GET' or method == 'HEAD' or method == 'CONNECT' then
+    self.useChunkedEncodingByDefault = false
+  else
+    self.useChunkedEncodingByDefault = true
+  end
+
+  if options.headers then
+    self:_storeHeader(self.method .. ' ' .. self.path .. ' HTTP/1.1\r\n', options.headers)
+  elseif self:getHeader('expect') then
+    self:_storeHeader(self.method .. ' ' .. self.path .. ' HTTP/1.1\r\n', self:_renderHeaders())
+  end
+
+  local conn
+  self._last = true
+  self.shouldSendKeepAlive = false
+
+  if options.createConnection then
+    options.port = port
+    options.host = host
+    conn = options.createConnection(options)
+  else
+    conn = net.createConnection({
+      port = port,
+      host = host,
+      localAddress = options.localAddress
+    });
+  end
+
+  self:onSocket(conn)
+  self:_deferToConnect(function()
+    self:_flush()
+  end)
+end
+
+function ClientRequest:onSocket(socket)
+  process.nextTick(function()
+    local response = ServerResponse:new(self)
+
+    self.socket = socket
+
+    self.parser = HttpParser.new("response", {
+      onMessageBegin = function ()
+        headers = {}
+      end,
+      onUrl = function (url)
+      end,
+      onHeaderField = function (field)
+        current_field = field
+      end,
+      onHeaderValue = function (value)
+        headers[current_field:lower()] = value
+      end,
+      onHeadersComplete = function (info)
+        response.headers = headers
+        response.statusCode = info.status_code
+        response.httpVersionMinor = info.version_minor
+        response.httpVersionMajor = info.version_major
+        self:emit('response', response)
+      end,
+      onBody = function (chunk)
+        response:emit("data", chunk)
+      end,
+      onMessageComplete = function ()
+        response:emit("end")
+      end
+    })
+    socket._httpMessage = self
+
+    socket:on('drain', function()
+      if self._httpMessage then
+        self._httpMessage:emit('drain')
+      end
+    end)
+    socket:on('close', function()
+    end)
+    socket:on('end', function()
+    end)
+    socket:on('data', function(chunk)
+      p(chunk)
+      -- Ignore empty chunks
+      if #chunk == 0 then return end
+
+      -- Once we're in "upgrade" mode, the protocol is no longer HTTP and we
+      -- shouldn't send data to the HTTP parser
+      if response.upgrade then
+        response:emit("data", chunk)
+        return
+      end
+
+      local nparsed = parser:execute(chunk, 0, #chunk)
+      -- If it wasn't all parsed then there was an error parsing
+      if nparsed < #chunk then
+        response:emit("error", "parse error")
+      end
+    end)
+    socket:on('error', function(err)
+    end)
+    self:emit('socket', socket)
+  end)
+end
+
+function ClientRequest:_deferToConnect(callback)
+  local onSocket = function()
+    if self.socket.writable then
+      if callback then
+        callback()
+      end
+    else
+      self.socket:once('connect', function()
+        if callback then
+          callback()
+        end
+      end)
+    end
+  end
+
+  if not self.socket then
+    self:once('socket', onSocket)
+  else
+    onSocket()
+  end
+end
+
+
 
 local Request = iStream:extend()
 http.Request = Request
@@ -787,6 +995,9 @@ function Response:destroy(...)
 end
 
 --------------------------------------------------------------------------------
+function http.request2(options, callback)
+  return ClientRequest:new(options, callback)
+end
 
 function http.request(options, callback)
   -- Load options into local variables.  Assume defaults
