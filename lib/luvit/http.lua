@@ -416,7 +416,7 @@ function OutgoingMessage:write(chunk, encoding)
     return true
   end
 
-  if #chunk == 0 then
+  if not chunk or #chunk == 0 then
     return false
   end
 
@@ -706,6 +706,7 @@ function ClientRequest:onSocket(socket)
     socket:on('close', function()
     end)
     socket:on('end', function()
+      self.socket:destroy()
     end)
     socket:on('data', function(chunk)
       p(chunk)
@@ -719,13 +720,14 @@ function ClientRequest:onSocket(socket)
         return
       end
 
-      local nparsed = parser:execute(chunk, 0, #chunk)
+      local nparsed = self.parser:execute(chunk, 0, #chunk)
       -- If it wasn't all parsed then there was an error parsing
       if nparsed < #chunk then
         response:emit("error", "parse error")
       end
     end)
     socket:on('error', function(err)
+      self:emit('error', err)
     end)
     self:emit('socket', socket)
   end)
