@@ -753,6 +753,11 @@ function ClientRequest:_deferToConnect(callback)
 end
 
 
+function ClientRequest:_implicitHeader()
+  self:_storeHeader(self.method .. ' ' .. self.path .. ' HTTP/1.1\r\n',
+                    self:_renderHeaders())
+end
+
 
 local Request = iStream:extend()
 http.Request = Request
