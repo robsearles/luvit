@@ -49,7 +49,7 @@ function createConnection(...)
   return tls.connect(options, callback)
 end
 
-function request2(options, callback)
+function request(options, callback)
   if type(options) == 'string' then
     options = url.parse(options)
   end
@@ -58,9 +58,9 @@ function request2(options, callback)
   end
   options.createConnection = createConnection
   options.port = options.port or 443
-  return http.request2(options, callback)
+  return http.request(options, callback)
 end
 
 local https = {}
-https.request2 = request2
+https.request = request
 return https
