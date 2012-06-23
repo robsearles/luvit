@@ -24,6 +24,7 @@ local timer = require('timer')
 local utils = require('utils')
 local Emitter = require('core').Emitter
 local iStream = require('core').iStream
+local table = require('table')
 
 local net = {}
 
@@ -89,7 +90,7 @@ function Socket:write(data, callback)
   if self._connecting == true then
     self._connectQueueSize = self._connectQueueSize + #data 
     if self._connectQueue then
-      table.insert(self._connectQueue({data, callback}))
+      table.insert(self._connectQueue, {data, callback})
     else
       self._connectQueue = { {data, callback} }
     end

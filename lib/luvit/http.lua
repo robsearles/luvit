@@ -31,13 +31,13 @@ local CRLF = '\r\n'
 local iStream = require('core').iStream
 local http = {}
 
-local connectionExpression = 'Connection'
-local transferEncodingExpression = 'Transfer-Encoding'
+local connectionExpression = 'connection'
+local transferEncodingExpression = 'transfer-encoding'
 local closeExpression = 'close'
 local chunkExpression = 'chunk'
-local contentLengthExpression = 'Content-Length'
-local dateExpression = 'Date'
-local expectExpression = 'Expect'
+local contentLengthExpression = 'content-length'
+local dateExpression = 'date'
+local expectExpression = 'expect'
 local continueExpression = '100-continue'
 
 local STATUS_CODES = {
@@ -293,24 +293,25 @@ function OutgoingMessage:_storeHeader(firstLine, headers)
   local field, value
 
   function store(field, value)
+    local matchField = field:lower()
     messageHeader = messageHeader .. field .. ': ' .. value .. CRLF
-    if field:match(connectionExpression) then
+    if matchField == connectionExpression then
       sentConnectionHeader = true
-      if value:match(closeExpression) then
+      if value == closeExpression then
         self._last = true
       else
         self.shouldKeepAlive = true
       end
-    elseif field:match(transferEncodingExpression) then
+    elseif matchField == transferEncodingExpression then
       sentTransferEncodingHeader = true
-      if value:match(chunkExpression) then
+      if value == chunkExpression then
         self.chunkedEncoding = true
       end
-    elseif field:match(contentLengthExpression) then
+    elseif matchField == contentLengthExpression then
       sentContentLengthHeader = true
-    elseif field:match(dateExpression) then
+    elseif matchField == dateExpression then
       sentDateHeader = true
-    elseif field:match(expectExpression) then
+    elseif matchField == expectExpression then
       sentExpect = true
     end
   end
@@ -401,7 +402,7 @@ function OutgoingMessage:_renderHeaders()
 
   local headers = {}
   for k, v in pairs(self._headers) do
-    headers[self._headers[key]] = v
+    headers[self._headerNames[k]] = v
   end
   return headers
 end
@@ -420,9 +421,9 @@ function OutgoingMessage:write(chunk, encoding)
     return false
   end
 
-  local len, ret
+  local ret
   if self.chunkedEncoding then
-    len = #chunk
+    local len = #chunk
     chunk = tostring(tonumber(len, 16)) .. CRLF .. chunk .. CRLF
     ret = self:_send(chunk, encoding)
   else
@@ -463,14 +464,18 @@ function OutgoingMessage:done(data, encoding)
     data = false
   end
 
+  local hot = false
   local ret
-  local hot = self._headerSent == false and type(data) == 'string' and
-              #data > 0 and #self.output == 0 and self.socket and socket.socket.writable
+  if self._headerSent == false and type(data) == 'string' and
+    #data > 0 and #self.output == 0 and self.socket and self.socket.writable then
+    hot = true
+  end
 
   if hot then
     if self.chunkedEncoding then
       local l = tostring(tonumber(#data, 16))
-      ret = self.socket:write(self._header .. l .. CRLF .. data .. '\r\n0\r\n' .. self._trailer .. CRLF)
+      local buf = self._header .. l .. CRLF .. data .. '\r\n0\r\n' .. self._trailer .. CRLF
+      ret = self.socket:write(buf)
     else
       ret = self.socket:write(self._header .. data)
     end
@@ -603,6 +608,7 @@ function ClientRequest:initialize(options, callback)
   local defaultPort = options.defaultPort or 80
   local port = options.port or defaultPort
   local host = options.hostname or options.host or 'localhost'
+  local setHost = options.setHost or true
   self.socketPath = options.socketPath
   self.method = (options.method or 'GET'):upper()
   self.path = options.path or '/'
@@ -633,7 +639,7 @@ function ClientRequest:initialize(options, callback)
     self.useChunkedEncodingByDefault = true
   end
 
-  if options.headers then
+  if options.headers and options.headers[1] then
     self:_storeHeader(self.method .. ' ' .. self.path .. ' HTTP/1.1\r\n', options.headers)
   elseif self:getHeader('expect') then
     self:_storeHeader(self.method .. ' ' .. self.path .. ' HTTP/1.1\r\n', self:_renderHeaders())
@@ -655,6 +661,8 @@ function ClientRequest:initialize(options, callback)
     });
   end
 
+  self.socket = conn
+
   self:onSocket(conn)
   self:_deferToConnect(function()
     self:_flush()
@@ -664,6 +672,7 @@ end
 function ClientRequest:onSocket(socket)
   process.nextTick(function()
     local response = ServerResponse:new(self)
+    response.socket = socket
 
     self.socket = socket
 

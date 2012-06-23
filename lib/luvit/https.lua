@@ -50,14 +50,12 @@ function createConnection(...)
 end
 
 function request(options, callback)
-  if type(options) == 'string' then
-    options = url.parse(options)
-  end
   if options.protocol and options.protocol ~= 'https' then
     error(fmt('Protocol %s not supported', options.protocol))
   end
   options.createConnection = createConnection
   options.port = options.port or 443
+  options.defaultPort = 443
   return http.request(options, callback)
 end
 
