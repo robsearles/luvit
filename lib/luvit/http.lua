@@ -323,10 +323,10 @@ function OutgoingMessage:_storeHeader(firstLine, headers)
         value = headers[k][1]
       else
         field = k
-        value = headers[k]
+        value = v
       end
 
-      if value[1] then -- isArray
+      if type(value) == 'table' and value[1] then -- isArray
         for k, v in pairs(value) do
           store(field, v)
         end
