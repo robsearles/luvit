@@ -424,9 +424,9 @@ function OutgoingMessage:write(chunk, encoding)
   if self.chunkedEncoding then
     len = #chunk
     chunk = tostring(tonumber(len, 16)) .. CRLF .. chunk .. CRLF
-    ret = self._send(chunk, encoding)
+    ret = self:_send(chunk, encoding)
   else
-    ret = self._send(chunk, encoding)
+    ret = self:_send(chunk, encoding)
   end
 
   return ret
@@ -557,9 +557,7 @@ function ServerResponse:writeHead(statusCode, ...)
   local reasonPhrase, headers
   local args = {...}
 
-  if #args > 0 then
-    reasonPhrase = STATUS_CODES[statusCode] or 'unknown'
-  end
+  reasonPhrase = STATUS_CODES[statusCode] or 'unknown'
   self.statusCode = statusCode
 
   local obj = args[1]
@@ -643,7 +641,7 @@ function ClientRequest:initialize(options, callback)
 
   local conn
   self._last = true
-  self.shouldSendKeepAlive = false
+  self.shouldKeepAlive = false
 
   if options.createConnection then
     options.port = port
