@@ -36,9 +36,9 @@
 <ul>
   <li><a href="../examples/buffer-basics.lua.html">buffer-basics.lua</a></li>
   <li><a href="../examples/child-execfile.lua.html">child-execfile.lua</a></li>
-  <li><a href="../examples/child-spawn.lua.html">child-spawn.lua</a></li>
+  <li><strong>child-spawn.lua</strong></li>
   <li><a href="../examples/http-client.lua.html">http-client.lua</a></li>
-  <li><strong>http-server.lua</strong></li>
+  <li><a href="../examples/http-server.lua.html">http-server.lua</a></li>
 </ul>
 <h2>Modules</h2>
 <ul>
@@ -60,21 +60,24 @@
 
 <div id="content">
 
-<h1>Example <code>http-server.lua</code></h1>
+<h1>Example <code>child-spawn.lua</code></h1>
 
     <pre>
-<span class="keyword">local</span> http = <span class="global">require</span>(<span class="string">"http"</span>)
+<span class="comment">--- Example of the `spawn` child process command
+</span><span class="comment">--
+</span><span class="comment">-- This example simply outputs the last two lines of this file and
+</span><span class="comment">-- informs the use when thie child process has exited.
+</span><span class="comment">-- It uses the `tail` command found on *nix platforms
+</span><span class="comment">-- Note: not tested on windows
+</span><span class="keyword">local</span> spawn = <span class="global">require</span>(<span class="string">'childprocess'</span>).spawn
 
-http.createServer(<span class="keyword">function</span> (req, res)
-  <span class="keyword">local</span> body = <span class="string">"Hello world\n"</span>
-  res:writeHead(<span class="number">200</span>, {
-    [<span class="string">"Content-Type"</span>] = <span class="string">"text/plain"</span>,
-    [<span class="string">"Content-Length"</span>] = #body
-  })
-  res:finish(body)
-<span class="keyword">end</span>):listen(<span class="number">8080</span>)
-
-<span class="global">print</span>(<span class="string">"Server listening at http://localhost:8080/"</span>)
+<span class="keyword">local</span> child = spawn(<span class="string">'tail'</span>, {<span class="string">'-n 2'</span>; <span class="string">'./child-spawn.lua'</span>}, {})
+child.stdout:on(<span class="string">'data'</span>, <span class="keyword">function</span>(chunk)
+    <span class="global">print</span>(chunk)
+<span class="keyword">end</span>)
+child:on(<span class="string">"exit"</span>, <span class="keyword">function</span>()
+    <span class="global">print</span>(<span class="string">"exited"</span>)
+<span class="keyword">end</span>)
 
 </div> <!-- id="content" -->
 </div> <!-- id="main" -->
