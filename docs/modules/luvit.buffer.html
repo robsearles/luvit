@@ -1,0 +1,634 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>Luvit documentation</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>Luvit</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul>
+  <li><strong>luvit.buffer</strong></li>
+  <li><a href="../modules/luvit.http.html">luvit.http</a></li>
+  <li><a href="../modules/luvit.querystring.html">luvit.querystring</a></li>
+  <li><a href="../modules/luvit.url.html">luvit.url</a></li>
+</ul>
+<h2>Topics</h2>
+<ul>
+  <li><a href="../topics/README.markdown.html">README.markdown</a></li>
+  <li><a href="../topics/api.markdown.html">api.markdown</a></li>
+  <li><a href="../topics/docs.markdown.html">docs.markdown</a></li>
+  <li><a href="../topics/errors.markdown.html">errors.markdown</a></li>
+</ul>
+<h2>Examples</h2>
+<ul>
+  <li><a href="../examples/buffer-basics.lua.html">buffer-basics.lua</a></li>
+  <li><a href="../examples/http-client.lua.html">http-client.lua</a></li>
+  <li><a href="../examples/http-server.lua.html">http-server.lua</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>luvit.buffer</code></h1>
+
+<p>Use and manipulate raw buffers</p>
+<p>
+<h3>Example</h3>
+<pre><code>local Buffer = require('buffer').Buffer
+local buf1 = Buffer:new("Hello")
+local buf2 = Buffer:new("World")
+
+p(buf1:toString()) -- Hello
+p(buf1.." "..buf2) -- "Hello World"
+
+buf1[1] = 0x68
+buf2[1] = 0x77
+p(buf1.." "..buf2) -- "hello world"
+
+p(buf1:readInt8(1)) -- 104
+p(buf1:readInt16BE(1)) -- 26725
+</code></pre>
+
+<h3>References</h3>
+
+<ul>
+    <li><a href="http://en.wikipedia.org/wiki/Endianness">http://en.wikipedia.org/wiki/Endianness</a></li>
+    <li><a href="http://en.wikipedia.org/wiki/Signedness">http://en.wikipedia.org/wiki/Signedness</a></li>
+</ul>
+
+<h3>Note</h3>
+<p> The Buffer Module does not work with Windows.</p>
+
+</p>
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local Buffer = require('buffer').Buffer</pre>
+    </ul>
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:initialize">Buffer:initialize&nbsp;(length)</a></td>
+	<td class="summary">Creation of the Buffer object</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer.meta:__ipairs">Buffer.meta:__ipairs&nbsp;()</a></td>
+	<td class="summary">Meta function to iterate through the Buffer table</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer.meta:__tostring">Buffer.meta:__tostring&nbsp;()</a></td>
+	<td class="summary">Return the signature for the Buffer contents</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer.meta:__concat">Buffer.meta:__concat&nbsp;(other)</a></td>
+	<td class="summary">Meta function to concatenate two buffers</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer.meta:__index">Buffer.meta:__index&nbsp;(key)</a></td>
+	<td class="summary">Meta function to get value at specified index of Buffer</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer.meta:__newindex">Buffer.meta:__newindex&nbsp;(key, value)</a></td>
+	<td class="summary">Meta function to replace value at index with another</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:inspect">Buffer:inspect&nbsp;()</a></td>
+	<td class="summary">Generates full contents of Buffer for inspection</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readUInt8">Buffer:readUInt8&nbsp;(offset)</a></td>
+	<td class="summary">Reads the unsigned 8 bit integer from the Buffer located at specified offset</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readInt8">Buffer:readInt8&nbsp;(offset)</a></td>
+	<td class="summary">Reads the signed 8 bit integer from the Buffer located at specified offset</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readUInt16LE">Buffer:readUInt16LE&nbsp;(offset)</a></td>
+	<td class="summary">Reads the unsigned 16 bit integer from the Buffer located at
+ specified offset using Little Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readUInt16BE">Buffer:readUInt16BE&nbsp;(offset)</a></td>
+	<td class="summary">Reads the unsigned 16 bit integer from the Buffer located at
+ specified offset using Big Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readInt16LE">Buffer:readInt16LE&nbsp;(offset)</a></td>
+	<td class="summary">Reads the signed 16 bit integer from the Buffer located at
+ specified offset using Little Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readInt16BE">Buffer:readInt16BE&nbsp;(offset)</a></td>
+	<td class="summary">Reads the signed 16 bit integer from the Buffer located at
+ specified offset using Big Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readUInt32LE">Buffer:readUInt32LE&nbsp;(offset)</a></td>
+	<td class="summary">Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Little Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readUInt32BE">Buffer:readUInt32BE&nbsp;(offset)</a></td>
+	<td class="summary">Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Big Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readInt32LE">Buffer:readInt32LE&nbsp;(offset)</a></td>
+	<td class="summary">Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Little Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:readInt32BE">Buffer:readInt32BE&nbsp;(offset)</a></td>
+	<td class="summary">Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Big Endian notaion</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Buffer:toString">Buffer:toString&nbsp;(i, j)</a></td>
+	<td class="summary">Stringify the Buffer contents, if offsets are provided, return
+ only those values within the offset range</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "Buffer:initialize"></a>
+    <strong>Buffer:initialize&nbsp;(length)</strong>
+    </dt>
+    <dd>
+    Creation of the Buffer object
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">length</span>
+       int or string</li>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ul>
+        <li><pre class="example">local buf1 = Buffer:new("Hello")</pre></li>
+        <li><pre class="example">local buf2 = Buffer:new(5)</pre></li>
+    </ul>
+
+
+
+    <h3>see also:</h3>
+    <ul>
+         <a href="../examples/buffer-basics.lua.html#">buffer-basics.lua</a>
+    </ul>
+</dd>
+    <dt>
+    <a name = "Buffer.meta:__ipairs"></a>
+    <strong>Buffer.meta:__ipairs&nbsp;()</strong>
+    </dt>
+    <dd>
+    Meta function to iterate through the Buffer table
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local buf1 = Buffer:new("Hello")
+for index, value in ipairs(buf1) do
+   p(index, value)
+end
+ -- Output:
+ -- 1	72
+ -- 2	101
+ -- 3	108
+ -- 4	108
+ -- 5	111</pre>
+    </ul>
+
+
+
+</dd>
+    <dt>
+    <a name = "Buffer.meta:__tostring"></a>
+    <strong>Buffer.meta:__tostring&nbsp;()</strong>
+    </dt>
+    <dd>
+    Return the signature for the Buffer contents
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local buf1 = Buffer:new("Hello")
+ p(buf1)
+ -- Output
+ -- { ctype = cdata<unsigned char *>: 0x40678890, length = 5 }</pre>
+    </ul>
+
+
+
+</dd>
+    <dt>
+    <a name = "Buffer.meta:__concat"></a>
+    <strong>Buffer.meta:__concat&nbsp;(other)</strong>
+    </dt>
+    <dd>
+    Meta function to concatenate two buffers
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">other</span>
+       Another Buffer object</li>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local Buffer = require('buffer').Buffer
+local buf1 = Buffer:new("Hello")
+local buf2 = Buffer:new("World")
+p(buf1.." "..buf2) -- "Hello World"</pre>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        stringified representation of concatenated buffers
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer.meta:__index"></a>
+    <strong>Buffer.meta:__index&nbsp;(key)</strong>
+    </dt>
+    <dd>
+    Meta function to get value at specified index of Buffer
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">key</span>
+       of value to retrieve</li>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local Buffer = require('buffer').Buffer
+local buf1 = Buffer:new("Hello")
+ p(buf1[1]) -- 72</pre>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        value at index
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer.meta:__newindex"></a>
+    <strong>Buffer.meta:__newindex&nbsp;(key, value)</strong>
+    </dt>
+    <dd>
+    Meta function to replace value at index with another
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">key</span>
+       of value to replace</li>
+      <li><span class="parameter">value</span>
+       to replace</li>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local Buffer = require('buffer').Buffer
+local buf1 = Buffer:new("Hello")
+p(buf1[1]) -- 72
+buf1[1] = 0x68
+ p(buf1[1]) -- 104</pre>
+    </ul>
+
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:inspect"></a>
+    <strong>Buffer:inspect&nbsp;()</strong>
+    </dt>
+    <dd>
+    Generates full contents of Buffer for inspection
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local Buffer = require('buffer').Buffer
+local buf1 = Buffer:new("Hello")
+p(buf1:inspect()) -- "<Buffer 48 65 6c 6c 6f>"</pre>
+    </ul>
+
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readUInt8"></a>
+    <strong>Buffer:readUInt8&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Reads the unsigned 8 bit integer from the Buffer located at specified offset
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        unsigned 8 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readInt8"></a>
+    <strong>Buffer:readInt8&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Reads the signed 8 bit integer from the Buffer located at specified offset
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        unsigned 8 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readUInt16LE"></a>
+    <strong>Buffer:readUInt16LE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Reads the unsigned 16 bit integer from the Buffer located at
+ specified offset using Little Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        unsigned 16 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readUInt16BE"></a>
+    <strong>Buffer:readUInt16BE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Reads the unsigned 16 bit integer from the Buffer located at
+ specified offset using Big Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        unsigned 16 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readInt16LE"></a>
+    <strong>Buffer:readInt16LE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Reads the signed 16 bit integer from the Buffer located at
+ specified offset using Little Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        signed 16 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readInt16BE"></a>
+    <strong>Buffer:readInt16BE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Reads the signed 16 bit integer from the Buffer located at
+ specified offset using Big Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        signed 16 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readUInt32LE"></a>
+    <strong>Buffer:readUInt32LE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Little Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        unsigned 32 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readUInt32BE"></a>
+    <strong>Buffer:readUInt32BE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Big Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        unsigned 32 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readInt32LE"></a>
+    <strong>Buffer:readInt32LE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Little Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        signed 32 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:readInt32BE"></a>
+    <strong>Buffer:readInt32BE&nbsp;(offset)</strong>
+    </dt>
+    <dd>
+    Read the unsigned 32 bit integer from the Buffer located at
+ specified offset using Big Endian notaion
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">offset</span>
+       int</li>
+    </ul>
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        signed 32 bit integer
+    </ol>
+
+
+</dd>
+    <dt>
+    <a name = "Buffer:toString"></a>
+    <strong>Buffer:toString&nbsp;(i, j)</strong>
+    </dt>
+    <dd>
+    Stringify the Buffer contents, if offsets are provided, return
+ only those values within the offset range
+
+    <h3>Parameters:</h3>
+    <ul>
+      <li><span class="parameter">i</span>
+       start of offset range</li>
+      <li><span class="parameter">j</span>
+       end of offset range</li>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">local Buffer = require('buffer').Buffer
+local buf1 = Buffer:new("Hello")
+p(buf1:toString()) -- "Hello"
+p(buf1:toString(2, 4)) -- "ell"</pre>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        string representation of Buffer
+    </ol>
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.2</a></i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

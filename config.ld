@@ -9,6 +9,7 @@ topics= {
 	'README.markdown'; 
 	'docs.markdown';
 	'api.markdown';
+	'errors.markdown';
 	}
 examples = {
    'examples/http-server.lua';
