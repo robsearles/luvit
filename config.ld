@@ -15,5 +15,7 @@ examples = {
    'examples/http-server.lua';
    'examples/http-client.lua';
    'examples/buffer-basics.lua';
+   'examples/child-spawn.lua';
+   'examples/child-execfile.lua';
 }
 

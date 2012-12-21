@@ -1,3 +1,5 @@
+--- Open up a new child process
+
 --[[
 
 Copyright 2012 The Luvit Authors. All Rights Reserved.
@@ -20,6 +22,19 @@ local table = require('table')
 
 local childProcess = {}
 
+
+--- Spawn a new Child Process, returning the Event Emitter stream for
+--- manipulation.
+-- *Note: is this correct?*
+-- @param command to run
+-- @param arguments to pass to the command
+-- @param any environmental options to pass to the child process
+-- @return the new process Emitter
+-- @usage local child = spawn('tail', {'-n 2'; './child-spawn.lua'}, {})
+--child.stdout:on('data', function(chunk)
+--    print(chunk)
+--end)
+-- @see child-spawn.lua
 function childProcess.spawn(command, args, options)
   local env
   local envPairs = {}
@@ -40,6 +55,19 @@ function childProcess.spawn(command, args, options)
   return Process:new(command, args, options)
 end
 
+--- Execute a child command, stdout and stderr from the child process, along with the any errors encountered, are returned as parameters in the callback.
+-- *Note: is the above correct?*
+--
+-- @param command to run
+-- @param arguments to pass to the command
+-- @param any environmental options to pass to the child process
+-- @param callback {error, stdout, stdout}
+-- @usage local exec = execFile('tail', {'./child-execfile.lua'}, {},
+--   function(err, stdout, stderr)
+--      p("stdout:", stdout)
+--   end
+--)
+-- @see child-execfile.lua
 function childProcess.execFile(command, args, options, callback)
   local child = childProcess.spawn(command, args, options)
   local stdout = {}
