@@ -1,3 +1,5 @@
+--- HTTP Module
+
 --[[
 
 Copyright 2012 The Luvit Authors. All Rights Reserved.
@@ -15,6 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 --]]
+
 
 local net = require('net')
 local HttpParser = require('http_parser')
@@ -97,7 +100,7 @@ local STATUS_CODES = {
 }
 http.STATUS_CODES = STATUS_CODES
 
---------------------------------------------------------------------------------
+-- ------------------------------------------------------------------------------
 --[[ Incoming Message Base Class ]]--
 local IncomingMessage = iStream:extend()
 function IncomingMessage:initialize(socket)
@@ -1062,7 +1065,9 @@ function Response:destroy(...)
   return self.socket:destroy(...)
 end
 
---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+--- Http Client Request
+-- @see http-client.lua
 function http.request(options, callback)
   if type(options) == 'string' then
     options = url.parse(options)
@@ -1230,6 +1235,10 @@ function http.onClient(server, client, onConnection)
   return server
 end
 
+
+--- Create Server
+-- You can see this in more detail in the `http-server.lua` example.
+-- @see http-server.lua
 function http.createServer(onConnection)
   local server
   server = net.createServer(function(client)

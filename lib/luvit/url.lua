@@ -1,3 +1,5 @@
+--- Helper module for parsing, URLs
+
 --[[
 
 Copyright 2012 The Luvit Authors. All Rights Reserved.
@@ -16,10 +18,34 @@ limitations under the License.
 
 --]]
 
+
+--- This module uses the `querystring` module
 local querystring = require('querystring')
 
 local url = {}
 
+--- Parses a URL, returning a table containing the URL information
+--
+-- @usage p(url.parse("http://creationix.com:8080/foo/bar?this=sdr"))
+--p(url.parse("http://creationix.com/foo/bar?this=sdr", true))
+--p(url.parse("http://creationix.com/foo/bar"))
+--p(url.parse("http://creationix.com/"))
+--p(url.parse("creationix.com/"))
+--p(url.parse("/"))
+--p(url.parse("/foobar"))
+--p(url.parse("/README.markdown"))
+-- @param url The URL to parse
+-- @param parseQueryString if true, parse Query String as well
+-- @return Table, consiting of:
+--     href
+--     protocol
+--     host
+--     hostname
+--     port
+--     pathname
+--     search
+--     query (if parseQueryString set to true)
+-- @see querystring
 function url.parse(url, parseQueryString)
   local href = url
   local chunk, protocol = url:match("^(([a-z0-9+]+)://)")
@@ -53,13 +79,5 @@ function url.parse(url, parseQueryString)
 
 end
 
---p(url.parse("http://creationix.com:8080/foo/bar?this=sdr"))
---p(url.parse("http://creationix.com/foo/bar?this=sdr"))
---p(url.parse("http://creationix.com/foo/bar"))
---p(url.parse("http://creationix.com/"))
---p(url.parse("creationix.com/"))
---p(url.parse("/"))
---p(url.parse("/foobar"))
---p(url.parse("/README.markdown"))
-
+-- module
 return url

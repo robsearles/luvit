@@ -1,3 +1,5 @@
+--- Helper module for parsing, encoding and decoding query strings
+
 --[[
 
 Copyright 2012 The Luvit Authors. All Rights Reserved.
@@ -17,7 +19,6 @@ limitations under the License.
 --]]
 
 
--- querystring helpers
 local querystring = {}
 
 local string = require('string')
@@ -29,6 +30,14 @@ local format = string.format
 local match = string.match
 local gmatch = string.gmatch
 
+--- Decodes a URL encoded string
+-- '+' are decoded to spaces, Hexidecimals are decoded to their
+-- alpha-numeric equivalent
+--
+-- @usage local example = "this+is+a+%C2%A3test+%3Cto+encode%3E"
+--local decoded = qs.urlencode(example)
+-- @param str The url encoded string to decode
+-- @return The decoded string
 function querystring.urldecode(str)
   str = gsub(str, '+', ' ')
   str = gsub(str, '%%(%x%x)', function(h)
@@ -38,6 +47,14 @@ function querystring.urldecode(str)
   return str
 end
 
+--- Encodes a string to be used in the query part of a url. Spaces are
+-- encoded to plus (+) signs. Non alpha-numeric characters are
+-- encoded to their hexadecimal equivalent.
+--
+-- @usage local example = "this is a £test <to encode>"
+--local encoded = qs.urlencode(example)
+-- @param str The string to encode
+-- @return The url encoded string
 function querystring.urlencode(str)
   if str then
     str = gsub(str, '\n', '\r\n')
@@ -49,7 +66,16 @@ function querystring.urlencode(str)
   return str
 end
 
--- parse querystring into table. urldecode tokens
+--- Encodes a string to be used in the query part of a url. Spaces are
+-- encoded to plus (+) signs. Non alpha-numeric characters are encoded
+-- to their hexadecimal equivalent.
+--
+-- @usage local example = "this is a £test <to encode>"
+--local encoded = qs.urlencode(example)
+-- @param str The string to encode
+-- @param sep Character to separate parameters. Default is `&`
+-- @param eq Character for value assignation. Default is `=`
+-- @return The url encoded string
 function querystring.parse(str, sep, eq)
   if not sep then sep = '&' end
   if not eq then eq = '=' end
